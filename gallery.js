@@ -1,288 +1,420 @@
 import * as THREE from "three";
 
 // ---------------------------------------------------------------------------
-// Artworks — all public domain. `cm` is the real height in centimetres and
-// drives how big each piece hangs relative to the others.
+// Artworks — all public domain. `size` scales each piece relative to the base
+// painting height, so large canvases hang a little bigger than small ones.
 // ---------------------------------------------------------------------------
 const ARTWORKS = [
-  { file: "starry-night", title: "The Starry Night", artist: "Vincent van Gogh", year: "1889", medium: "Oil on canvas", cm: 74 },
-  { file: "white-on-white", title: "Suprematist Composition: White on White", artist: "Kazimir Malevich", year: "1918", medium: "Oil on canvas", cm: 79 },
-  { file: "picture-with-an-archer", title: "Picture with an Archer", artist: "Vasily Kandinsky", year: "1909", medium: "Oil on canvas", cm: 175 },
-  { file: "seed-of-the-areoi", title: "The Seed of the Areoi", artist: "Paul Gauguin", year: "1892", medium: "Oil on burlap", cm: 92 },
-  { file: "evening-honfleur", title: "Evening, Honfleur", artist: "Georges-Pierre Seurat", year: "1886", medium: "Oil on canvas, with painted frame", cm: 78 },
-  { file: "the-dream", title: "The Dream", artist: "Henri Rousseau", year: "1910", medium: "Oil on canvas", cm: 205 },
-  { file: "joseph-roulin", title: "Portrait of Joseph Roulin", artist: "Vincent van Gogh", year: "1889", medium: "Oil on canvas", cm: 64 },
-  { file: "still-life-with-apples", title: "Still Life with Apples", artist: "Paul Cézanne", year: "1895–98", medium: "Oil on canvas", cm: 69 },
-  { file: "hope-ii", title: "Hope, II", artist: "Gustav Klimt", year: "1907–08", medium: "Oil, gold, and platinum on canvas", cm: 111 },
-  { file: "the-storm", title: "The Storm", artist: "Edvard Munch", year: "1893", medium: "Oil on canvas", cm: 92 },
-  { file: "the-bather", title: "The Bather", artist: "Paul Cézanne", year: "c. 1885", medium: "Oil on canvas", cm: 127 },
-  { file: "felix-feneon", title: "Portrait of Félix Fénéon", artist: "Paul Signac", year: "1890", medium: "Oil on canvas", cm: 74 },
-  { file: "the-city-rises", title: "The City Rises", artist: "Umberto Boccioni", year: "1910", medium: "Oil on canvas", cm: 199 },
-  { file: "olive-trees", title: "The Olive Trees", artist: "Vincent van Gogh", year: "1889", medium: "Oil on canvas", cm: 73 },
-  { file: "sleeping-gypsy", title: "The Sleeping Gypsy", artist: "Henri Rousseau", year: "1897", medium: "Oil on canvas", cm: 130 },
+  { file: "starry-night", title: "The Starry Night", artist: "Vincent van Gogh", year: "1889", medium: "Oil on canvas", size: 0.74 },
+  { file: "white-on-white", title: "Suprematist Composition: White on White", artist: "Kazimir Malevich", year: "1918", medium: "Oil on canvas", size: 0.72 },
+  { file: "picture-with-an-archer", title: "Picture with an Archer", artist: "Vasily Kandinsky", year: "1909", medium: "Oil on canvas", size: 0.92 },
+  { file: "seed-of-the-areoi", title: "The Seed of the Areoi", artist: "Paul Gauguin", year: "1892", medium: "Oil on burlap", size: 0.8 },
+  { file: "evening-honfleur", title: "Evening, Honfleur", artist: "Georges-Pierre Seurat", year: "1886", medium: "Oil on canvas, with painted frame", size: 0.72 },
+  { file: "the-dream", title: "The Dream", artist: "Henri Rousseau", year: "1910", medium: "Oil on canvas", size: 0.84 },
+  { file: "joseph-roulin", title: "Portrait of Joseph Roulin", artist: "Vincent van Gogh", year: "1889", medium: "Oil on canvas", size: 0.66 },
+  { file: "still-life-with-apples", title: "Still Life with Apples", artist: "Paul Cézanne", year: "1895–98", medium: "Oil on canvas", size: 0.64 },
+  { file: "hope-ii", title: "Hope, II", artist: "Gustav Klimt", year: "1907–08", medium: "Oil, gold, and platinum on canvas", size: 0.84 },
+  { file: "the-storm", title: "The Storm", artist: "Edvard Munch", year: "1893", medium: "Oil on canvas", size: 0.76 },
+  { file: "the-bather", title: "The Bather", artist: "Paul Cézanne", year: "c. 1885", medium: "Oil on canvas", size: 0.9 },
+  { file: "felix-feneon", title: "Portrait of Félix Fénéon", artist: "Paul Signac", year: "1890", medium: "Oil on canvas", size: 0.7 },
+  { file: "the-city-rises", title: "The City Rises", artist: "Umberto Boccioni", year: "1910", medium: "Oil on canvas", size: 0.82 },
+  { file: "olive-trees", title: "The Olive Trees", artist: "Vincent van Gogh", year: "1889", medium: "Oil on canvas", size: 0.7 },
+  { file: "sleeping-gypsy", title: "The Sleeping Gypsy", artist: "Henri Rousseau", year: "1897", medium: "Oil on canvas", size: 0.8 },
 ];
 
 // ---------------------------------------------------------------------------
-// Tunables. Works hang on a strip that wraps around the inside of a cylinder;
-// the strip is longer than the cylinder's circumference, so pieces loop out of
-// sight behind the camera and re-enter on the other side.
+// The room. Works travel along a U-shaped wall: the left wall runs from beside
+// the camera to the back, a rounded corner turns onto a flat back wall, and a
+// second corner leads onto the right wall coming back toward the camera.
+// Sizes are multiples of the average painting width, so the room scales with
+// the viewport.
 // ---------------------------------------------------------------------------
 const TUNE = {
-  radius: 9,            // cylinder radius (world units)
-  baseHeight: 3.1,      // world height of an ~80cm painting
-  sizeCurve: 0.42,      // <1 compresses the range between tiny and huge works
-  gap: 2.0,             // horizontal space between works
-  back: 1.0,            // camera sits this fraction of the radius behind centre
-  fov: 72,              // vertical field of view on landscape screens
-  lookY: -0.3,
-  portraitHFov: 66,     // horizontal field of view on phones
-  autoSpeed: 0.16,      // world units / second of idle drift
-  friction: 3.2,
+  cameraZ: 2000,          // camera distance; FOV is set so 1 unit = 1px at z = 0
+  paintingHeight: 0.6,    // base painting height as a fraction of viewport height…
+  paintingHeightMax: 560, // …capped at this many px
+  roomWidth: 2.3,         // back wall width (× average painting width)
+  roomDepth: 4.5,         // how far the back wall sits behind the focal plane
+  cornerRadius: 0.75,     // rounded corner radius
+  sideScale: 1.25,        // side walls stretch works in depth for stronger foreshortening
+  gap: 0.6,               // space between works
+  labelHeight: 0.24,      // caption block height (× base painting height)
+  labelGap: 0.04,
+  drift: 14,              // idle drift, px / second (0 to disable)
 };
-window.__tune = TUNE; // handy for tweaking from the console, then call __relayout()
 
-const CAPTION_GAP = 0.16;
-const CAPTION_HEIGHT = 1.15;
-const PX_PER_UNIT = 240;
+const SEGMENTS = 96; // vertical strips per painting — enough to bend smoothly around corners
 
-const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 const root = document.getElementById("gallery");
 const canvas = document.getElementById("scene");
 const hint = document.getElementById("hint");
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
 renderer.setClearColor(0xffffff, 1);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 200);
+const camera = new THREE.PerspectiveCamera(50, 1, 1, 20000);
+camera.position.set(0, 0, TUNE.cameraZ);
+camera.lookAt(0, 0, 0);
 const maxAniso = renderer.capabilities.getMaxAnisotropy();
 
-// A plane wrapped onto the inside of a cylinder of radius r, spanning arc
-// lengths x0..x1 (measured from the front, right is positive) and heights y0..y1.
-function curvedPlane(r, x0, x1, y0, y1) {
-  const a0 = x0 / r;
-  const a1 = x1 / r;
-  const segs = Math.max(4, Math.ceil(((a1 - a0) * 180) / Math.PI / 1.5));
-  const geo = new THREE.PlaneGeometry(1, 1, segs, 1);
-  const pos = geo.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    const u = pos.getX(i) + 0.5;
-    const v = pos.getY(i) + 0.5;
-    const a = a0 + (a1 - a0) * u;
-    pos.setXYZ(i, r * Math.sin(a), y0 + (y1 - y0) * v, -r * Math.cos(a));
+function makeStrip(transparent) {
+  const geo = new THREE.PlaneGeometry(1, 1, SEGMENTS, 1);
+  geo.getAttribute("position").setUsage(THREE.DynamicDrawUsage);
+  geo.getAttribute("uv").setUsage(THREE.DynamicDrawUsage);
+  const mat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, transparent, depthWrite: !transparent });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.frustumCulled = false; // vertices move every frame, so the bounding sphere would be stale
+  mesh.visible = false;
+  scene.add(mesh);
+  return mesh;
+}
+
+// ---------------------------------------------------------------------------
+// Path geometry
+// ---------------------------------------------------------------------------
+let room = null;
+
+function buildRoom({ width, depth, front, radius, sideScale }) {
+  radius = Math.max(0, Math.min(radius, width / 2, depth + front));
+  const sideLength = (depth + front - radius) / sideScale;
+  // Corners are traversed with eased angular speed (see cornerAngle), which
+  // changes their path length relative to a plain quarter circle.
+  const cornerLength = (Math.PI * radius) / (sideScale + 1);
+  const backLength = width - 2 * radius;
+  return { width, depth, front, radius, sideScale, sideLength, cornerLength, backLength, length: 2 * sideLength + 2 * cornerLength + backLength };
+}
+
+// Angle through a corner for progress t∈[0,1], ending at a quarter turn. The
+// angular speed starts proportional to `from` and ends proportional to `to`,
+// so motion flows seamlessly out of a (stretched) side wall into the back wall.
+function cornerAngle(t, from, to) {
+  return (Math.PI * (from * t + (to - from) * (t ** 3 - t ** 4 / 2))) / (from + to);
+}
+
+const point = { x: 0, z: 0 };
+function pointOnPath(u) {
+  const { width, depth, front, radius: r, sideScale: k, sideLength, cornerLength, backLength } = room;
+  u = Math.max(0, Math.min(u, room.length));
+
+  if (u <= sideLength) { // left wall, walking away from the camera
+    point.x = -width / 2;
+    point.z = front - u * k;
+    return point;
   }
-  geo.computeVertexNormals();
-  return geo;
+  u -= sideLength;
+  if (u <= cornerLength) { // back-left corner
+    const a = cornerAngle(u / cornerLength, k, 1);
+    point.x = -width / 2 + r - r * Math.cos(a);
+    point.z = -depth + r - r * Math.sin(a);
+    return point;
+  }
+  u -= cornerLength;
+  if (u <= backLength) { // back wall
+    point.x = -width / 2 + r + u;
+    point.z = -depth;
+    return point;
+  }
+  u -= backLength;
+  if (u <= cornerLength) { // back-right corner
+    const a = cornerAngle(u / cornerLength, 1, k);
+    point.x = width / 2 - r + r * Math.sin(a);
+    point.z = -depth + r - r * Math.cos(a);
+    return point;
+  }
+  u -= cornerLength;
+  point.x = width / 2; // right wall, walking back toward the camera
+  point.z = -depth + r + u * k;
+  return point;
 }
 
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.decoding = "async";
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
+// Bend a strip mesh so it spans [centre - w/2, centre + w/2] along the path.
+// Anything hanging off either end of the path is trimmed (UVs follow), so works
+// slide in and out past the camera instead of popping.
+function layStrip(mesh, centre, w, h, cy) {
+  const start = centre - w / 2;
+  const a = Math.max(start, 0);
+  const b = Math.min(start + w, room.length);
+  if (w <= 0 || b <= a || !mesh.material.map) { mesh.visible = false; return; }
+  mesh.visible = true;
+
+  const pos = mesh.geometry.getAttribute("position");
+  const uv = mesh.geometry.getAttribute("uv");
+  for (let i = 0; i <= SEGMENTS; i++) {
+    const u = a + ((b - a) * i) / SEGMENTS;
+    const p = pointOnPath(u);
+    const tu = (u - start) / w;
+    pos.setXYZ(i, p.x, cy + h / 2, p.z);
+    pos.setXYZ(i + SEGMENTS + 1, p.x, cy - h / 2, p.z);
+    uv.setX(i, tu);
+    uv.setX(i + SEGMENTS + 1, tu);
+  }
+  pos.needsUpdate = true;
+  uv.needsUpdate = true;
 }
 
-function captionTexture(art, widthUnits) {
-  const w = Math.round(Math.max(widthUnits, 3.4) * PX_PER_UNIT);
-  const h = Math.round(CAPTION_HEIGHT * PX_PER_UNIT);
+// ---------------------------------------------------------------------------
+// Items
+// ---------------------------------------------------------------------------
+const items = ARTWORKS.map((art) => ({
+  art,
+  aspect: 1,
+  painting: makeStrip(false),
+  label: makeStrip(true),
+  labelAspect: 4,
+  w: 0, h: 0, labelW: 0, labelH: 0, labelCy: 0, stripCentre: 0,
+}));
+let stripLength = 1;
+
+function labelCanvas(art) {
+  const serif = "Newsreader, Georgia, serif";
+  const titleFont = `italic 400 44px ${serif}`;
+  const bodyFont = `400 44px ${serif}`;
+  const measure = document.createElement("canvas").getContext("2d");
+  measure.font = titleFont;
+  let width = measure.measureText(art.title).width;
+  measure.font = bodyFont;
+  for (const t of [art.artist, art.year, art.medium]) width = Math.max(width, measure.measureText(t).width);
+
+  const W = Math.ceil(width) + 4, H = 262, line = 56;
   const c = document.createElement("canvas");
-  c.width = w;
-  c.height = h;
+  c.width = W * 2;
+  c.height = H * 2;
   const ctx = c.getContext("2d");
-  const s = PX_PER_UNIT / 100; // font sizes below are in hundredths of a unit
+  ctx.scale(2, 2);
   ctx.textBaseline = "top";
+  let y = 18;
+  ctx.fillStyle = "#404040";
+  ctx.font = titleFont;
+  ctx.fillText(art.title, 0, y);
+  ctx.fillStyle = "#bdbdbd";
+  ctx.font = bodyFont;
+  for (const t of [art.artist, art.year, art.medium]) { y += line; ctx.fillText(t, 0, y); }
+  return c;
+}
 
-  ctx.fillStyle = "#1a1a1a";
-  ctx.font = `italic 400 ${20 * s}px Newsreader, Georgia, serif`;
-  ctx.fillText(art.title, 0, 2 * s, w);
-
-  ctx.fillStyle = "#9a9a9a";
-  ctx.font = `400 ${18 * s}px Newsreader, Georgia, serif`;
-  const line = 25 * s;
-  [art.artist, art.year, art.medium].forEach((t, i) => ctx.fillText(t, 0, 3 * s + line * (i + 1), w));
-
-  const tex = new THREE.CanvasTexture(c);
+function prepTexture(tex) {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = maxAniso;
-  return { tex, widthUnits: w / PX_PER_UNIT };
+  return tex;
 }
-
-const items = [];
-let stripLength = 1;
-let visibleLimit = Math.PI;
-
-async function build() {
-  await Promise.all([
-    document.fonts.load("italic 400 20px Newsreader"),
-    document.fonts.load("400 20px Newsreader"),
-  ]).catch(() => {});
-
-  const images = await Promise.all(ARTWORKS.map((a) => loadImage(`artworks/${a.file}.jpg`)));
-
-  ARTWORKS.forEach((art, i) => {
-    const img = images[i];
-    const tex = new THREE.Texture(img);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = maxAniso;
-    tex.needsUpdate = true;
-
-    const group = new THREE.Group();
-    const painting = new THREE.Mesh(undefined, new THREE.MeshBasicMaterial({ map: tex }));
-    const caption = new THREE.Mesh(undefined, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }));
-    group.add(painting, caption);
-    scene.add(group);
-    items.push({ art, aspect: img.naturalWidth / img.naturalHeight, group, painting, caption, index: i });
-  });
-
-  relayout();
-  state.offset = items[0].centre + 0.2 * TUNE.radius; // open with the first work just left of centre
-  requestAnimationFrame(() => root.classList.add("ready"));
-}
-
-// (Re)build geometry from TUNE — sizes, strip positions, captions.
-function relayout() {
-  const r = TUNE.radius;
-  let cursor = 0;
-  items.forEach((it) => {
-    const h = TUNE.baseHeight * Math.pow(it.art.cm / 80, TUNE.sizeCurve);
-    const w = h * it.aspect;
-    it.centre = cursor + w / 2;
-    cursor += w + TUNE.gap;
-
-    // Gentle vertical rhythm so the wall doesn't read as a strict line.
-    const lift = Math.sin(it.index * 2.3) * 0.22;
-    const top = h / 2 + lift + 0.45;
-    const bottom = top - h;
-
-    it.painting.geometry?.dispose();
-    it.painting.geometry = curvedPlane(r, -w / 2, w / 2, bottom, top);
-
-    const cap = it.caption.material.map ? { tex: it.caption.material.map, widthUnits: it.captionWidth } : captionTexture(it.art, w);
-    it.caption.material.map = cap.tex;
-    it.caption.material.needsUpdate = true;
-    it.captionWidth = cap.widthUnits;
-    it.caption.geometry?.dispose();
-    it.caption.geometry = curvedPlane(r, -w / 2, -w / 2 + cap.widthUnits, bottom - CAPTION_GAP - CAPTION_HEIGHT, bottom - CAPTION_GAP);
-  });
-  stripLength = cursor;
-  resize();
-}
-window.__relayout = relayout;
 
 // ---------------------------------------------------------------------------
-// Camera framing — pulls in on narrow screens so phones still see a few works.
+// Layout — recomputed on resize and once textures report their aspect ratios.
 // ---------------------------------------------------------------------------
-function resize() {
-  const w = root.clientWidth;
-  const h = root.clientHeight;
-  renderer.setSize(w, h, false);
-  camera.aspect = w / h;
+let dirty = true;
 
-  const r = TUNE.radius;
-  const portrait = w / h < 1;
-  // On tall screens, step toward the wall and frame by horizontal angle instead.
-  const b = portrait ? TUNE.back * 0.3 : TUNE.back;
-  camera.position.set(0, 0, r * b);
-  // Hide works once they've swung past the camera (their faces are culled from there on),
-  // so the jump where the strip wraps is never on screen.
-  visibleLimit = Math.min(Math.PI - 0.05, (b > 1 ? Math.acos(-1 / b) : Math.PI - 0.35) + 0.5);
-  camera.fov = portrait
-    ? THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(TUNE.portraitHFov / 2)) / camera.aspect))
-    : TUNE.fov;
-  camera.lookAt(0, TUNE.lookY, -r);
+function layout() {
+  const vw = root.clientWidth;
+  const vh = root.clientHeight;
+  const narrow = vw < 700;
+  renderer.setSize(vw, vh, false);
+  camera.aspect = vw / vh;
+  camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(vh / 2 / TUNE.cameraZ));
   camera.updateProjectionMatrix();
+
+  const base = Math.min(TUNE.paintingHeight * vh, TUNE.paintingHeightMax);
+  let total = 0;
+  for (const it of items) {
+    it.h = base * it.art.size;
+    it.w = it.h * it.aspect;
+    it.labelH = TUNE.labelHeight * base;
+    it.labelW = it.labelH * it.labelAspect;
+    it.labelCy = -it.h / 2 - TUNE.labelGap * base - it.labelH / 2;
+    total += it.w;
+  }
+  const avg = total / items.length;
+
+  const width = narrow ? 1.25 * avg : TUNE.roomWidth * avg;
+  const depth = narrow ? 3.5 * avg : TUNE.roomDepth * avg;
+  // Side walls reach forward past the focal plane; the narrower the back wall is
+  // relative to the screen, the further they reach so the edges stay filled.
+  const front = Math.max(0, Math.min(TUNE.cameraZ * (1 - width / vw) + 200, 1200));
+  room = buildRoom({ width, depth, front, radius: TUNE.cornerRadius * avg, sideScale: TUNE.sideScale });
+
+  let cursor = 0;
+  const gap = TUNE.gap * avg;
+  for (const it of items) {
+    it.stripCentre = cursor + it.w / 2;
+    cursor += it.w + gap;
+  }
+  stripLength = Math.max(cursor, room.length + 2 * avg); // never show the same work twice at once
+  dirty = true;
 }
-window.addEventListener("resize", resize);
 
 // ---------------------------------------------------------------------------
-// Motion: idle drift + drag + wheel, all feeding one velocity along the strip.
+// Motion: wheel target with smoothing, drag with momentum, intro sweep.
 // ---------------------------------------------------------------------------
-const state = { offset: 0, velocity: 0, dragging: false, lastX: 0, lastT: 0, idleFor: 0 };
+let offset = 0;        // rendered position along the strip (px)
+let target = 0;        // where wheel/keys want to go
+let velocity = 0;      // fling momentum, px / ms
+let dragging = false;
+let lastPointer = 0;
+let lastMoveTime = 0;
+let pointerId = null;
+let touched = false;   // any input cancels the intro sweep
+let introStart = 0;
+let introDone = false;
+let idleFor = 0;
 
-// World units along the front wall per screen pixel, so drags track the finger.
-function unitsPerPixel() {
-  const dist = TUNE.radius + camera.position.z;
-  return (2 * dist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) / root.clientHeight;
+function interrupt() {
+  touched = true;
+  idleFor = 0;
+  hint.classList.add("gone");
 }
-
-function dismissHint() { hint.classList.add("gone"); }
-
-root.addEventListener("pointerdown", (e) => {
-  state.dragging = true;
-  state.lastX = e.clientX;
-  state.lastT = performance.now();
-  state.velocity = 0;
-  root.classList.add("dragging");
-  root.setPointerCapture(e.pointerId);
-  dismissHint();
-});
-root.addEventListener("pointermove", (e) => {
-  if (!state.dragging) return;
-  const now = performance.now();
-  const dt = Math.max(1, now - state.lastT) / 1000;
-  const d = (e.clientX - state.lastX) * unitsPerPixel();
-  state.offset -= d;
-  state.velocity = THREE.MathUtils.lerp(state.velocity, -d / dt, 0.35);
-  state.lastX = e.clientX;
-  state.lastT = now;
-});
-function endDrag(e) {
-  if (!state.dragging) return;
-  state.dragging = false;
-  state.idleFor = 0;
-  root.classList.remove("dragging");
-  if (performance.now() - state.lastT > 80) state.velocity = 0;
-  if (e?.pointerId != null && root.hasPointerCapture(e.pointerId)) root.releasePointerCapture(e.pointerId);
-}
-root.addEventListener("pointerup", endDrag);
-root.addEventListener("pointercancel", endDrag);
 
 root.addEventListener("wheel", (e) => {
   e.preventDefault();
-  const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-  state.velocity += delta * 0.03;
-  state.idleFor = 0;
-  dismissHint();
+  interrupt();
+  velocity = 0;
+  target += Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
 }, { passive: false });
 
-window.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowLeft") state.velocity -= 9;
-  if (e.key === "ArrowRight") state.velocity += 9;
-  if (e.key.startsWith("Arrow")) { state.idleFor = 0; dismissHint(); }
+// Touch: allow either axis to move the wall (phones feel natural scrolling vertically).
+function coord(e) {
+  return e.pointerType === "touch" ? e.clientX + e.clientY : e.clientX;
+}
+
+root.addEventListener("pointerdown", (e) => {
+  if (!e.isPrimary || e.button !== 0) return;
+  e.preventDefault();
+  interrupt();
+  dragging = true;
+  pointerId = e.pointerId;
+  velocity = 0;
+  target = offset;
+  lastPointer = coord(e);
+  lastMoveTime = e.timeStamp;
+  root.setPointerCapture(e.pointerId);
+  root.classList.add("dragging");
 });
 
-const wrap = (x, L) => ((((x + L / 2) % L) + L) % L) - L / 2;
+window.addEventListener("pointermove", (e) => {
+  if (!dragging || e.pointerId !== pointerId) return;
+  const events = e.getCoalescedEvents?.() ?? [];
+  for (const ev of events.length ? events : [e]) {
+    const c = coord(ev);
+    const d = (lastPointer - c) * 1.5;
+    const dt = Math.max(8, ev.timeStamp - lastMoveTime);
+    velocity = THREE.MathUtils.lerp(velocity, THREE.MathUtils.clamp(d / dt, -3, 3), 0.5);
+    offset += d;
+    lastPointer = c;
+    lastMoveTime = ev.timeStamp;
+  }
+  target = offset;
+  idleFor = 0;
+  dirty = true;
+});
+
+function endDrag(e) {
+  if (!dragging || (e && e.pointerId !== pointerId)) return;
+  dragging = false;
+  // Pausing before letting go kills the fling.
+  const held = e ? Math.max(0, e.timeStamp - lastMoveTime - 32) : Infinity;
+  velocity = reducedMotion.matches ? 0 : velocity * Math.exp(-held / 120);
+  if (pointerId !== null && root.hasPointerCapture(pointerId)) root.releasePointerCapture(pointerId);
+  pointerId = null;
+  root.classList.remove("dragging");
+}
+window.addEventListener("pointerup", endDrag);
+window.addEventListener("pointercancel", endDrag);
+window.addEventListener("blur", () => endDrag());
+
+window.addEventListener("keydown", (e) => {
+  if (["ArrowRight", "ArrowDown", "PageDown"].includes(e.key)) { interrupt(); target += 160; }
+  if (["ArrowLeft", "ArrowUp", "PageUp"].includes(e.key)) { interrupt(); target -= 160; }
+});
+
+new ResizeObserver(layout).observe(root);
 
 let last = performance.now();
 function tick(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
+  const dt = Math.min(64, now - last);
   last = now;
 
-  if (!state.dragging) {
-    state.offset += state.velocity * dt;
-    state.velocity *= Math.exp(-TUNE.friction * dt);
-    state.idleFor += dt;
-    // Ease back into the idle drift once a fling has settled.
-    if (!reducedMotion) {
-      state.offset += TUNE.autoSpeed * Math.min(1, Math.max(0, state.idleFor - 1.2) / 2) * dt;
+  // Intro: sweep the wall along once, easing out, unless the visitor grabs it.
+  if (introStart && !introDone && !touched && now >= introStart) {
+    const t = Math.min((now - introStart) / 2400, 1);
+    offset = target = 1080 * (1 - Math.pow(1 - t, 3));
+    dirty = true;
+    if (t >= 1) introDone = true;
+  }
+
+  // Fling momentum decays with a ~240ms time constant.
+  if (!dragging && Math.abs(velocity) > 0.01) {
+    const decay = Math.exp(-dt / 240);
+    offset += 240 * velocity * (1 - decay);
+    velocity *= decay;
+    target = offset;
+    dirty = true;
+  } else if (!dragging) {
+    velocity = 0;
+  }
+
+  // Wheel and keys ease toward their target.
+  const toTarget = target - offset;
+  if (Math.abs(toTarget) > 0.05) { offset += toTarget * 0.18; dirty = true; }
+
+  // Gentle idle drift once everything has settled.
+  if (!dragging && (introDone || touched) && TUNE.drift && !reducedMotion.matches) {
+    idleFor += dt;
+    const ramp = Math.min(1, Math.max(0, idleFor - 2500) / 2000);
+    if (ramp > 0) {
+      const d = (TUNE.drift * ramp * dt) / 1000;
+      offset += d;
+      target += d;
+      dirty = true;
     }
   }
 
-  for (const it of items) {
-    const angle = wrap(it.centre - state.offset, stripLength) / TUNE.radius;
-    it.group.rotation.y = -angle;
-    it.group.visible = Math.abs(angle) < visibleLimit;
+  if (dirty && room) {
+    for (const it of items) {
+      let c = (((it.stripCentre - offset) % stripLength) + stripLength) % stripLength;
+      // If this lap has carried the work past the end, the previous lap may still be entering.
+      if (c - it.w / 2 >= room.length && c - stripLength + it.w / 2 > 0) c -= stripLength;
+      layStrip(it.painting, c, it.w, it.h, 0);
+      layStrip(it.label, c - it.w / 2 + it.labelW / 2, it.labelW, it.labelH, it.labelCy);
+    }
+    renderer.render(scene, camera);
+    dirty = false;
   }
-
-  renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }
 
-resize();
-build().then(() => requestAnimationFrame(tick));
+async function start() {
+  layout();
+  requestAnimationFrame(tick);
+
+  const fontsReady = Promise.all([
+    document.fonts.load("italic 400 44px Newsreader"),
+    document.fonts.load("400 44px Newsreader"),
+  ]).catch(() => {});
+
+  const loader = new THREE.TextureLoader();
+  const paintings = Promise.all(items.map((it) =>
+    loader.loadAsync(`artworks/${it.art.file}.jpg`).then((tex) => {
+      prepTexture(tex);
+      it.aspect = tex.image.width / tex.image.height;
+      it.painting.material.map = tex;
+      it.painting.material.needsUpdate = true;
+    })
+  ));
+
+  await Promise.all([fontsReady, paintings]);
+  for (const it of items) {
+    const c = labelCanvas(it.art);
+    it.labelAspect = c.width / c.height;
+    it.label.material.map = prepTexture(new THREE.CanvasTexture(c));
+    it.label.material.needsUpdate = true;
+  }
+  layout();
+
+  root.classList.add("ready");
+  introStart = performance.now() + 700; // let the wall start rising before it sweeps
+}
+
+start();
