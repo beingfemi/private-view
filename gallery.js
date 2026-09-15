@@ -49,7 +49,6 @@ const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 const root = document.getElementById("gallery");
 const canvas = document.getElementById("scene");
-const hint = document.getElementById("hint");
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
 renderer.setClearColor(0xffffff, 1);
@@ -171,7 +170,7 @@ const items = ARTWORKS.map((art) => ({
 let stripLength = 1;
 
 function labelCanvas(art) {
-  const serif = "Newsreader, Georgia, serif";
+  const serif = "'Source Serif 4', Georgia, serif";
   const titleFont = `italic 400 44px ${serif}`;
   const bodyFont = `400 44px ${serif}`;
   const measure = document.createElement("canvas").getContext("2d");
@@ -264,7 +263,6 @@ let idleFor = 0;
 function interrupt() {
   touched = true;
   idleFor = 0;
-  hint.classList.add("gone");
 }
 
 root.addEventListener("wheel", (e) => {
@@ -390,8 +388,8 @@ async function start() {
   requestAnimationFrame(tick);
 
   const fontsReady = Promise.all([
-    document.fonts.load("italic 400 44px Newsreader"),
-    document.fonts.load("400 44px Newsreader"),
+    document.fonts.load("italic 400 44px 'Source Serif 4'"),
+    document.fonts.load("400 44px 'Source Serif 4'"),
   ]).catch(() => {});
 
   const loader = new THREE.TextureLoader();
